@@ -5,11 +5,11 @@ plugins {
 
 android {
     namespace = "com.zhenya.dpichanger.xposed"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 35
     }
 
     compileOptions {
