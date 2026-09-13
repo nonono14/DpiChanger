@@ -2,7 +2,7 @@ package com.zhenya.dpichanger
 
 import android.content.Context
 import android.os.IBinder
-import android.os.UserHandle
+import android.os.Process
 
 object DensityUtils {
 
@@ -38,7 +38,9 @@ object DensityUtils {
                 Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType
             )
-            method.invoke(wm, density, UserHandle.myUserId())
+            // Заменили UserHandle.myUserId() на получение ID через хэш-код UserHandle
+            val userId = Process.myUserHandle().hashCode()
+            method.invoke(wm, density, userId)
             Result.success(Unit)
         } catch (e: SecurityException) {
             Result.failure(Exception("Нет прав WRITE_SECURE_SETTINGS. Выдай через ADB.", e))
@@ -54,7 +56,9 @@ object DensityUtils {
                 "clearForcedDisplayDensityForUser",
                 Int::class.javaPrimitiveType
             )
-            method.invoke(wm, UserHandle.myUserId())
+            // Заменили UserHandle.myUserId() на получение ID через хэш-код UserHandle
+            val userId = Process.myUserHandle().hashCode()
+            method.invoke(wm, userId)
             Result.success(Unit)
         } catch (e: SecurityException) {
             Result.failure(Exception("Нет прав WRITE_SECURE_SETTINGS. Выдай через ADB.", e))
