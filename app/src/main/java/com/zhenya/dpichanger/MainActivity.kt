@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,8 +23,10 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TimeText
 import androidx.wear.compose.material3.dynamicColorScheme
@@ -43,111 +45,120 @@ private val DPI_PRESETS = listOf(160, 180, 200, 220, 240, 260, 280, 300, 320)
 @Composable
 fun DpiChangerApp() {
     val context = LocalContext.current
-    var currentDpi by remember { mutableStateOf(DensityUtils.getCurrentDensity(context)) }
+    var currentDpi by remember { mutableIntStateOf(DensityUtils.getCurrentDensity(context)) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     val listState = rememberScalingLazyListState()
 
-    val colorScheme = try {
+    // 1. Исправили ошибку 'ColorScheme?': принудительно приводим к не-null типу
+    val colorScheme: ColorScheme = try {
         dynamicColorScheme(context)
     } catch (e: Exception) {
         MaterialTheme.colorScheme
     }
 
     MaterialTheme(colorScheme = colorScheme) {
-        TimeText()
-
-        ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = listState,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // 2. Исправили ошибку `@Composable invocations`: обернули TimeText и список в ScreenScaffold
+        ScreenScaffold(
+            timeText = { TimeText() }
         ) {
-            item {
-                Text(
-                    text = "Текущий DPI",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 24.dp)
-                )
-            }
-
-            item {
-                Text(
-                    text = "$currentDpi",
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            item {
-                statusMessage?.let {
+            ScalingLazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
                     Text(
-                        text = it,
+                        text = "Текущий DPI",
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 24.dp)
                     )
                 }
-            }
 
-            items(DPI_PRESETS) { dpi ->
-                val isCurrent = dpi == currentDpi
-                Button(
-                    onClick = {
-                        DensityUtils.setDensity(dpi).fold(
-                            onSuccess = {
-                                currentDpi = dpi
-                                statusMessage = "Применено: $dpi"
-                            },
-                            onFailure = { e ->
-                                statusMessage = e.message ?: "Ошибка"
-                            }
+                item {
+                    Text(
+                        text = "$currentDpi",
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                if (statusMessage != null) {
+                    item {
+                        Text(
+                            text = statusMessage!!,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth(0.85f),
-                    colors = if (isCurrent) {
-                        ButtonDefaults.buttonColors()
-                    } else {
-                        ButtonDefaults.filledTonalButtonColors()
                     }
-                ) {
-                    Text("$dpi dpi")
                 }
-            }
 
-            item {
-                OutlinedButton(
-                    onClick = {
-                        DensityUtils.resetDensity().fold(
-                            onSuccess = {
-                                currentDpi = DensityUtils.getDefaultDensity(context)
-                                statusMessage = "Сброшено на заводское"
+                // 3. Исправили ошибку `Argument type mismatch`:
+                // Для ScalingLazyColumn из Wear Compose итерация по списку пишется через цикл или через явный вызов по индексу/размеру
+                DPI_PRESETS.forEach { dpi ->
+                    item {
+                        val isCurrent = dpi == currentDpi
+                        Button(
+                            onClick = {
+                                DensityUtils.setDensity(dpi).fold(
+                                    onSuccess = {
+                                        currentDpi = dpi
+                                        statusMessage = "Применено: $dpi"
+                                    },
+                                    onFailure = { e ->
+                                        statusMessage = e.message ?: "Ошибка"
+                                    }
+                                )
                             },
-                            onFailure = { e ->
-                                statusMessage = e.message ?: "Ошибка"
+                            modifier = Modifier.fillMaxWidth(0.85f),
+                            colors = if (isCurrent) {
+                                ButtonDefaults.buttonColors()
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors()
                             }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(0.85f)
-                ) {
-                    Text("Сбросить")
+                        ) {
+                            Text("$dpi dpi")
+                        }
+                    }
                 }
-            }
 
-            item {
-                Text(
-                    text = "Если ошибка прав — выполни на компьютере:\n" +
-                            "adb shell pm grant com.zhenya.dpichanger " +
-                            "android.permission.WRITE_SECURE_SETTINGS",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(12.dp)
-                )
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            DensityUtils.resetDensity().fold(
+                                onSuccess = {
+                                    currentDpi = DensityUtils.getDefaultDensity(context)
+                                    statusMessage = "Сброшено на заводское"
+                                },
+                                onFailure = { e ->
+                                        statusMessage = e.message ?: "Ошибка"
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(0.85f)
+                    ) {
+                        Text("Сбросить")
+                    }
+                }
+
+                item {
+                    Text(
+                        text = "Если ошибка прав — выполни на компьютере:\n" +
+                                "adb shell pm grant com.zhenya.dpichanger " +
+                                "android.permission.WRITE_SECURE_SETTINGS",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
             }
         }
     }
 }
+
