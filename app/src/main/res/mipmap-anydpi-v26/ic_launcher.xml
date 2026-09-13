@@ -1,1 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://android.com">
+    <background android:drawable="@android:color/holo_blue_dark"/>
+    <foreground>
+        <inset android:inset="25%">
+            <vector android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+                <path android:fillColor="#FFFFFF" android:pathData="M34,46h40v16h-40z"/>
+            </vector>
+        </inset>
+    </foreground>
+</adaptive-icon>
 
